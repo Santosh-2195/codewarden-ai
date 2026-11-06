@@ -1,0 +1,27 @@
+# secrets - never commit real keys
+.env
+.env.local
+.env.*.local
+
+# CodeWarden cache and scratch output
+.codewarden/
+reports/tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node (sample app)
+node_modules/
+dist/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Netlify local state
+.netlify/
