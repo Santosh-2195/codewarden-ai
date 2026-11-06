@@ -1,0 +1,710 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeWarden AI",
+          "version": "1.0.0",
+          "informationUri": "https://github.com/",
+          "rules": [
+            {
+              "id": "CW-JS-SQLI-001",
+              "name": "SqlInjection",
+              "shortDescription": {
+                "text": "SQL Injection via unsafe string interpolation of search parameter"
+              },
+              "fullDescription": {
+                "text": "The endpoint retrieves the query parameter 'q' and directly interpolates it into a raw SQL query string executed via sql.unsafe(). An attacker can supply malicious input containing SQL command syntax or quotes to alter the query structure and access unauthorized data in the database."
+              },
+              "help": {
+                "text": "Use parameterized queries or the template literal syntax supported by the postgres library instead of sql.unsafe() with string interpolation."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-89"
+                ],
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "CW-JS-AUTHZ-001",
+              "name": "BrokenAccessControl",
+              "shortDescription": {
+                "text": "Privileged database client used without authenticating the caller (write path bypasses Row Level Security)"
+              },
+              "fullDescription": {
+                "text": "A server/edge request handler performs database operations with a privileged credential (service role / admin key / direct DB connection) but never verifies who is calling or whether they own the records they reference."
+              },
+              "help": {
+                "text": "Authenticate every request (verify the JWT from the Authorization header), then either query with a client scoped to the caller's token so RLS applies, or explicitly enforce ownership in the query. Reserve service-role keys for trusted back-office jobs."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-862"
+                ],
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "CW-JS-XSS-001",
+              "name": "CrossSiteScriptingXss",
+              "shortDescription": {
+                "text": "Cross-Site Scripting (XSS) via dangerouslySetInnerHTML"
+              },
+              "fullDescription": {
+                "text": "The component renders comment text using React's dangerouslySetInnerHTML property without prior HTML sanitisation. If an attacker can inject malicious JavaScript via task comments, it will execute in the browser of any user viewing the comment."
+              },
+              "help": {
+                "text": "Avoid using dangerouslySetInnerHTML for user-generated content. Render the text as standard child content or use a robust sanitisation library like DOMPurify before insertion."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-79"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "CW-SQL-RLS-004",
+              "name": "DatabaseAccessControl",
+              "shortDescription": {
+                "text": "Privilege Escalation via Unrestricted Column Updates on Profiles"
+              },
+              "fullDescription": {
+                "text": "The UPDATE policy on the profiles table restricts row access correctly by ID, but does not prevent users from modifying sensitive columns such as 'role'. PostgreSQL RLS controls row visibility and mutation, not individual columns."
+              },
+              "help": {
+                "text": "Use a trigger or column-level permissions (or a security definer function) to prevent users from updating the 'role' column themselves."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-269"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "CW-SQL-RLS-001",
+              "name": "DatabaseAccessControl",
+              "shortDescription": {
+                "text": "Over-permissive RLS Read Policy on Tasks Table"
+              },
+              "fullDescription": {
+                "text": "The RLS select policy on the tasks table allows any authenticated user to read all task records because the condition is set to 'true'. This violates the expected hierarchy where tasks should only be visible if the user owns or has access to the parent project."
+              },
+              "help": {
+                "text": "Restrict the SELECT policy on tasks to ensure users can only view tasks belonging to projects they own or have access to."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-284"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "CW-JS-MASS-001",
+              "name": "MassAssignment",
+              "shortDescription": {
+                "text": "Mass assignment: request body written to the database unfiltered"
+              },
+              "fullDescription": {
+                "text": "An object taken directly from the request body is passed to an update/insert call, so the client decides which columns are written."
+              },
+              "help": {
+                "text": "Validate the payload with a schema and copy only an explicit allow-list of editable fields; derive ownership and identifiers from the authenticated session, never from the body."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-915"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "CW-SQL-RLS-005",
+              "name": "DatabaseAccessControl",
+              "shortDescription": {
+                "text": "Missing Parent Project Ownership Check on Task Creation and Updates"
+              },
+              "fullDescription": {
+                "text": "The INSERT and UPDATE policies on the tasks table verify only that the task's owner_id matches the current user, failing to ensure that the project_id points to a project owned by the user."
+              },
+              "help": {
+                "text": "Include an existence check in the WITH CHECK expression to guarantee the target project belongs to the authenticated user."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-639"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "CW-SQL-RLS-003",
+              "name": "DatabaseAccessControl",
+              "shortDescription": {
+                "text": "RLS policy on `task_comments` does not scope rows to the current user"
+              },
+              "fullDescription": {
+                "text": "The policy relies on an EXISTS/IN subquery that only checks that a related row exists, without comparing it to the authenticated user. It looks restrictive but filters nothing user-specific."
+              },
+              "help": {
+                "text": "Make the subquery join to the parent and compare the parent's owner/membership with auth.uid()."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-863"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "CW-JS-ERRLEAK-001",
+              "name": "InformationDisclosure",
+              "shortDescription": {
+                "text": "Internal error details returned to the client"
+              },
+              "fullDescription": {
+                "text": "Raw exception text (database/driver messages, stack traces) is serialised into HTTP responses."
+              },
+              "help": {
+                "text": "Log the full error server-side with a correlation ID and return a generic message to the client."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-209"
+                ],
+                "security-severity": "3.0"
+              }
+            },
+            {
+              "id": "CW-JS-CORS-001",
+              "name": "SecurityMisconfiguration",
+              "shortDescription": {
+                "text": "Permissive CORS policy (Access-Control-Allow-Origin: *)"
+              },
+              "fullDescription": {
+                "text": "The API allows requests from any origin."
+              },
+              "help": {
+                "text": "Return an explicit allow-list of trusted origins and only echo the request Origin when it matches."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-942"
+                ],
+                "security-severity": "3.0"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CW-JS-SQLI-001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "[CW-001] SQL Injection via unsafe string interpolation of search parameter: The endpoint retrieves the query parameter 'q' and directly interpolates it into a raw SQL query string executed via sql.unsafe(). An attacker can supply malicious input containing SQL command syntax or quotes to alter the query structure and access unauthorized data in the database."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/search-tasks/index.ts"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 23
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/search-tasks/index.ts"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 20
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/search-tasks/index.ts"
+                },
+                "region": {
+                  "startLine": 21,
+                  "endLine": 21
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/search-tasks/index.ts"
+                },
+                "region": {
+                  "startLine": 25,
+                  "endLine": 25
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/search-tasks/index.ts"
+                },
+                "region": {
+                  "startLine": 26,
+                  "endLine": 26
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "Critical",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-89",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-JS-AUTHZ-001",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[CW-002] Privileged database client used without authenticating the caller (write path bypasses Row Level Security): A server/edge request handler performs database operations with a privileged credential (service role / admin key / direct DB connection) but never verifies who is calling or whether they own the records they reference."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/update-task/index.ts"
+                },
+                "region": {
+                  "startLine": 31,
+                  "endLine": 31
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/update-task/index.ts"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 11
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "Critical",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-862",
+            "source": "rule"
+          }
+        },
+        {
+          "ruleId": "CW-JS-XSS-001",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "[CW-003] Cross-Site Scripting (XSS) via dangerouslySetInnerHTML: The component renders comment text using React's dangerouslySetInnerHTML property without prior HTML sanitisation. If an attacker can inject malicious JavaScript via task comments, it will execute in the browser of any user viewing the comment."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/components/TaskComments.tsx"
+                },
+                "region": {
+                  "startLine": 40,
+                  "endLine": 42
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "High",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-79",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-JS-AUTHZ-001",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[CW-004] Privileged database client used without authenticating the caller (read path bypasses Row Level Security): A server/edge request handler performs database operations with a privileged credential (service role / admin key / direct DB connection) but never verifies who is calling or whether they own the records they reference."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/get-profile/index.ts"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 23
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/get-profile/index.ts"
+                },
+                "region": {
+                  "startLine": 4,
+                  "endLine": 4
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "High",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-862",
+            "source": "rule"
+          }
+        },
+        {
+          "ruleId": "CW-JS-AUTHZ-001",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[CW-005] Missing Authentication and RLS Bypass in Edge Function: The edge function connects directly to the PostgreSQL database using a connection string from Deno.env.get(\"DATABASE_URL\"). This client operates outside of Supabase's PostgREST context and bypasses Row Level Security (RLS) policies defined in the migrations. Furthermore, the endpoint does not check for an Authorization header or validate the user's JWT session."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/search-tasks/index.ts"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/search-tasks/index.ts"
+                },
+                "region": {
+                  "startLine": 4,
+                  "endLine": 4
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "High",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-862",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-SQL-RLS-004",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "[CW-006] Privilege Escalation via Unrestricted Column Updates on Profiles: The UPDATE policy on the profiles table restricts row access correctly by ID, but does not prevent users from modifying sensitive columns such as 'role'. PostgreSQL RLS controls row visibility and mutation, not individual columns."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/migrations/002_access_policies.sql"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 20
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "High",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-269",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-SQL-RLS-001",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "[CW-007] Over-permissive RLS Read Policy on Tasks Table: The RLS select policy on the tasks table allows any authenticated user to read all task records because the condition is set to 'true'. This violates the expected hierarchy where tasks should only be visible if the user owns or has access to the parent project."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/migrations/002_access_policies.sql"
+                },
+                "region": {
+                  "startLine": 38,
+                  "endLine": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "High",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-284",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-JS-MASS-001",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "[CW-008] Mass assignment: request body written to the database unfiltered: An object taken directly from the request body is passed to an update/insert call, so the client decides which columns are written."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/update-task/index.ts"
+                },
+                "region": {
+                  "startLine": 38,
+                  "endLine": 38
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "High",
+            "status": "Needs validation",
+            "confidence": "Medium",
+            "cwe": "CWE-915",
+            "source": "rule"
+          }
+        },
+        {
+          "ruleId": "CW-SQL-RLS-001",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "[CW-009] Over-permissive RLS read policy on `profiles` (USING true): A Row Level Security SELECT policy uses `USING (true)`, which makes every row visible to every user in the granted role, regardless of who owns the data."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/migrations/002_access_policies.sql"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 13
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "Medium",
+            "status": "Confirmed",
+            "confidence": "Medium",
+            "cwe": "CWE-284",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-SQL-RLS-005",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[CW-010] Missing Parent Project Ownership Check on Task Creation and Updates: The INSERT and UPDATE policies on the tasks table verify only that the task's owner_id matches the current user, failing to ensure that the project_id points to a project owned by the user."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/migrations/002_access_policies.sql"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 44
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/migrations/002_access_policies.sql"
+                },
+                "region": {
+                  "startLine": 51,
+                  "endLine": 51
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "Medium",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-639",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-SQL-RLS-003",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "[CW-011] RLS policy on `task_comments` does not scope rows to the current user: The policy relies on an EXISTS/IN subquery that only checks that a related row exists, without comparing it to the authenticated user. It looks restrictive but filters nothing user-specific."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/migrations/002_access_policies.sql"
+                },
+                "region": {
+                  "startLine": 57,
+                  "endLine": 57
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "Medium",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-863",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-SQL-RLS-005",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[CW-012] RLS write policy on `task_comments` does not verify access to parent `tasks`: INSERT/UPDATE policies check only the new row's owner column; the foreign key that links the row to a parent (project, task, organisation) is not validated against the caller's access."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/migrations/002_access_policies.sql"
+                },
+                "region": {
+                  "startLine": 69,
+                  "endLine": 69
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "Medium",
+            "status": "Confirmed",
+            "confidence": "Medium",
+            "cwe": "CWE-639",
+            "source": "rule+ai"
+          }
+        },
+        {
+          "ruleId": "CW-JS-ERRLEAK-001",
+          "ruleIndex": 8,
+          "level": "note",
+          "message": {
+            "text": "[CW-013] Internal error details returned to the client: Raw exception text (database/driver messages, stack traces) is serialised into HTTP responses."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/get-profile/index.ts"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 44
+                }
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/update-task/index.ts"
+                },
+                "region": {
+                  "startLine": 58,
+                  "endLine": 58
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "Low",
+            "status": "Confirmed",
+            "confidence": "High",
+            "cwe": "CWE-209",
+            "source": "rule"
+          }
+        },
+        {
+          "ruleId": "CW-JS-CORS-001",
+          "ruleIndex": 9,
+          "level": "note",
+          "message": {
+            "text": "[CW-014] Permissive CORS policy (Access-Control-Allow-Origin: *): The API allows requests from any origin."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "supabase/functions/update-task/index.ts"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 5
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "Low",
+            "status": "Needs validation",
+            "confidence": "Medium",
+            "cwe": "CWE-942",
+            "source": "rule"
+          }
+        }
+      ]
+    }
+  ]
+}
