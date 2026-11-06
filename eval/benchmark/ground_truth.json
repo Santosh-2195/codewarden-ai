@@ -1,0 +1,38 @@
+{
+  "app": "notehub",
+  "note": "Each entry is located by file + a unique substring of the vulnerable line. 'kind' = 'pattern' (detectable by rules) or 'logic' (needs reasoning; expected from the AI layer). Decoys are safe code that must NOT be reported.",
+  "vulnerabilities": [
+    {"id": "N1",  "file": "server/routes/notes.js", "contains": "WHERE title LIKE '%\" + req.query.q", "cwe": "CWE-89",  "kind": "pattern"},
+    {"id": "N2",  "file": "server/routes/notes.js", "contains": "res.status(500).json({ error: err.message })", "cwe": "CWE-209", "kind": "pattern"},
+    {"id": "N3",  "file": "server/routes/notes.js", "contains": "SELECT * FROM notes WHERE id = $1", "cwe": "CWE-639", "kind": "logic"},
+    {"id": "N4",  "file": "server/routes/notes.js", "contains": "exec(`convert ${req.body.file}", "cwe": "CWE-78",  "kind": "pattern"},
+    {"id": "N5",  "file": "server/routes/notes.js", "contains": "res.redirect(req.query.next)", "cwe": "CWE-601", "kind": "pattern"},
+    {"id": "N6",  "file": "server/auth.js", "contains": "const JWT_SECRET =", "cwe": "CWE-798", "kind": "pattern"},
+    {"id": "N7",  "file": "server/auth.js", "contains": "createHash(\"md5\")", "cwe": "CWE-328", "kind": "pattern"},
+    {"id": "N8",  "file": "server/auth.js", "contains": "const resetToken = Math.random()", "cwe": "CWE-338", "kind": "pattern"},
+    {"id": "N9",  "file": "server/auth.js", "contains": "return jwt.decode(token)", "cwe": "CWE-347", "kind": "pattern"},
+    {"id": "N10", "file": "api/app.py", "contains": "cur.execute(f\"SELECT id, email FROM users WHERE email", "cwe": "CWE-89", "kind": "pattern"},
+    {"id": "N11", "file": "api/app.py", "contains": "shell=True", "cwe": "CWE-78", "kind": "pattern"},
+    {"id": "N12", "file": "api/app.py", "contains": "yaml.load(request.data)", "cwe": "CWE-502", "kind": "pattern"},
+    {"id": "N13", "file": "api/app.py", "contains": "pickle.loads(request.data)", "cwe": "CWE-502", "kind": "pattern"},
+    {"id": "N14", "file": "api/app.py", "contains": "render_template_string(request.args", "cwe": "CWE-1336", "kind": "pattern"},
+    {"id": "N15", "file": "api/app.py", "contains": "app.run(debug=True)", "cwe": "CWE-489", "kind": "pattern"},
+    {"id": "N16", "file": "web/src/Note.jsx", "contains": "ref.current.innerHTML = note.body", "cwe": "CWE-79", "kind": "pattern"},
+    {"id": "N17", "file": "web/src/Note.jsx", "contains": "localStorage.setItem(\"authToken\"", "cwe": "CWE-922", "kind": "pattern"},
+    {"id": "N18", "file": "db/schema.sql", "contains": "USING (true);", "cwe": "CWE-284", "kind": "pattern"},
+    {"id": "N19", "file": "db/schema.sql", "contains": "WITH CHECK (id = auth.uid());", "cwe": "CWE-269", "kind": "pattern"},
+    {"id": "N20", "file": "db/schema.sql", "contains": "CREATE TABLE public.shares", "cwe": "CWE-284", "kind": "pattern"},
+    {"id": "N21", "file": "db/schema.sql", "contains": "GRANT ALL ON public.notes TO anon", "cwe": "CWE-732", "kind": "pattern"},
+    {"id": "N22", "file": "db/schema.sql", "contains": "CREATE OR REPLACE FUNCTION public.count_rows", "cwe": "CWE-427", "kind": "pattern"},
+    {"id": "N23", "file": "db/schema.sql", "contains": "EXECUTE 'SELECT count(*) FROM ' || tbl", "cwe": "CWE-89", "kind": "pattern"}
+  ],
+  "decoys": [
+    {"file": "server/routes/notes.js", "contains": "WHERE owner_id = $1"},
+    {"file": "server/auth.js", "contains": "process.env.MAIL_API_KEY"},
+    {"file": "api/app.py", "contains": "WHERE id = ?"},
+    {"file": "api/app.py", "contains": "yaml.safe_load"},
+    {"file": "web/src/Note.jsx", "contains": "DOMPurify.sanitize(note.body)"},
+    {"file": "web/src/Note.jsx", "contains": "<h2>{note.title}</h2>"},
+    {"file": "db/schema.sql", "contains": "CREATE POLICY \"Owners update notes\""}
+  ]
+}
