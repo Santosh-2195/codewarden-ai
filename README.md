@@ -14,9 +14,9 @@ Built for the **CDF CyberSec Hackathon 2026 - Intelligent Code Security Challeng
 
 | | |
 |---|---|
-| Sample report (CDF TaskFlow) | [`reports/sample-report.html`](reports/sample-report.html) / [`.md`](reports/sample-report.md) &nbsp;(live: **https://REPLACE-WITH-NETLIFY-SITE.netlify.app/report.html**) |
+| Sample report (CDF TaskFlow) | [`reports/sample-report.html`](reports/sample-report.html) / [`.md`](reports/sample-report.md) &nbsp;(live: **https://codewarden-ai-santosh.netlify.app/**) |
 | Rules-only baseline | [`reports/baseline-rules-only/`](reports/baseline-rules-only/) |
-| Demo video | **https://youtu.be/REPLACE_WITH_VIDEO_ID** |
+| Demo video | **https://drive.google.com/file/d/1cXPx41M5q1gQej9mEReLiPpxAhCCdXAj/view?usp=sharing** |
 | Architecture and AI design | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Rule catalog | [`docs/RULES.md`](docs/RULES.md) |
 | Evaluation | [`eval/`](eval/) |
