@@ -1,0 +1,639 @@
+{
+  "tool": {
+    "name": "CodeWarden AI",
+    "version": "1.0.0"
+  },
+  "project": "CDF TaskFlow",
+  "started": "2026-11-06 08:40 Eastern Standard Time",
+  "duration_s": 25.6,
+  "ai_model": "gemini:gemini-flash-lite-latest",
+  "ai_enabled": true,
+  "frameworks": [
+    "React",
+    "Supabase",
+    "Deno edge functions",
+    "PostgreSQL"
+  ],
+  "counts": {
+    "Critical": 2,
+    "High": 6,
+    "Medium": 4,
+    "Low": 2,
+    "Info": 0
+  },
+  "summary": {
+    "executive_summary": "The security assessment of CDF TaskFlow reveals a critical security posture due to severe authorization bypasses, SQL injection vulnerabilities, and insufficient input sanitization. Findings such as CW-001 and CW-002 expose the database to arbitrary command execution and complete RLS bypass via unauthenticated Deno edge functions. If exploited, these vulnerabilities could allow malicious actors to compromise sensitive user profiles, manipulate core project tasks, and execute arbitrary code within the hosting environment, leading to total confidentiality and integrity loss of the application data.",
+    "risk_rating": "Critical",
+    "overall_assessment": "The systemic root causes stem from inconsistent enforcement of boundary controls, where Deno edge functions utilize privileged database connections directly without validating caller authentication or session contexts. Additionally, database migrations implement overly permissive Row Level Security (RLS) policies (such as using USING true or missing ownership validations on parent relationships) that rely entirely on client-side constraints rather than robust server-side boundaries. Addressing these issues requires centralizing authentication checks in all edge functions, transitioning away from unsafe raw SQL string interpolation, and hardening PostgreSQL RLS policies to strictly validate user ownership across all hierarchical tables.",
+    "attack_chains": [
+      {
+        "title": "Unauthenticated Edge Function Exploitation and SQL Injection",
+        "finding_ids": [
+          "CW-001",
+          "CW-005"
+        ],
+        "narrative": "An attacker targets the unauthenticated 'search-tasks' edge function (CW-005) which bypasses RLS entirely. By leveraging the unsafe string interpolation vulnerability in the search query parameter (CW-001), the attacker injects malicious SQL commands to exfiltrate or alter unauthorized data across the database."
+      },
+      {
+        "title": "Privileged Execution and Privilege Escalation via Profile Updates",
+        "finding_ids": [
+          "CW-002",
+          "CW-006"
+        ],
+        "narrative": "An unauthenticated attacker abuses an unprotected edge function endpoint (CW-002) to interact with the database using privileged credentials. Combined with the unrestricted column updates on the profiles table (CW-006), the attacker can elevate standard user roles to administrative privileges."
+      },
+      {
+        "title": "Unrestricted Task Read Access and Stored XSS",
+        "finding_ids": [
+          "CW-003",
+          "CW-007"
+        ],
+        "narrative": "Due to the over-permissive RLS read policy on the tasks table allowing global access (CW-007), any authenticated user can view all tasks and comments. An attacker then injects malicious scripts into task comments, which are subsequently rendered unsanitized via dangerouslySetInnerHTML (CW-003) to hijack sessions of other users viewing the comments."
+      }
+    ],
+    "prioritized_actions": [
+      {
+        "action": "Refactor the search-tasks edge function to use parameterized queries instead of unsafe string interpolation for the 'q' parameter.",
+        "finding_ids": [
+          "CW-001"
+        ],
+        "effort": "Low"
+      },
+      {
+        "action": "Implement strict authentication checks and user context validation in all Deno edge functions (search-tasks, update-task, get-profile) before executing database queries.",
+        "finding_ids": [
+          "CW-002",
+          "CW-004",
+          "CW-005"
+        ],
+        "effort": "Medium"
+      },
+      {
+        "action": "Sanitize all comment inputs before rendering and remove the use of dangerouslySetInnerHTML in TaskComments.tsx.",
+        "finding_ids": [
+          "CW-003"
+        ],
+        "effort": "Low"
+      },
+      {
+        "action": "Revise PostgreSQL RLS policies on tasks, profiles, and task_comments to restrict visibility strictly to owners and valid parent project relationships.",
+        "finding_ids": [
+          "CW-006",
+          "CW-007",
+          "CW-009",
+          "CW-010",
+          "CW-011",
+          "CW-012"
+        ],
+        "effort": "Medium"
+      },
+      {
+        "action": "Implement strict input validation and explicit column whitelisting on update-task and profile modification endpoints to prevent mass assignment.",
+        "finding_ids": [
+          "CW-008"
+        ],
+        "effort": "Low"
+      },
+      {
+        "action": "Disable verbose error responses in production edge functions to prevent the leakage of internal database or driver exception details.",
+        "finding_ids": [
+          "CW-013"
+        ],
+        "effort": "Low"
+      }
+    ],
+    "positive_observations": [
+      "Row Level Security (RLS) is enabled on all primary database tables in the initial schema migrations, establishing a baseline security architecture.",
+      "Database schema appropriately utilizes foreign key constraints to link profiles, projects, tasks, and task comments to Supabase auth users."
+    ],
+    "generated_by": "ai",
+    "risk_score": 70
+  },
+  "metrics": {
+    "files_collected": 13,
+    "files_ai_reviewed": 11,
+    "lines_scanned": 862,
+    "rule_candidates": 17,
+    "ai_confirmed": 9,
+    "ai_needs_validation": 0,
+    "ai_rejected": 2,
+    "ai_new_findings": 0,
+    "ai_severity_adjusted": 1,
+    "grounding_dropped": 0,
+    "grounding_relocated": 0,
+    "merged_duplicates": 1,
+    "ai_calls": 14,
+    "ai_cache_hits": 0,
+    "ai_errors": 2,
+    "secrets_redacted": 1,
+    "injection_markers": 0,
+    "skipped_files": [],
+    "ai_error_messages": [
+      "supabase/functions/update-task/index.ts: Expecting property name enclosed in double quotes: line 45 column 7 (char 1636)",
+      "supabase/functions/get-profile/index.ts: Expecting property name enclosed in double quotes: line 33 column 7 (char 989)"
+    ]
+  },
+  "findings": [
+    {
+      "title": "SQL Injection via unsafe string interpolation of search parameter",
+      "category": "SQL Injection",
+      "cwe": "CWE-89",
+      "severity": "Critical",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/functions/search-tasks/index.ts",
+          "start_line": 23,
+          "end_line": 23,
+          "snippet": "WHERE title ILIKE '%${searchTerm}%'"
+        },
+        {
+          "file": "supabase/functions/search-tasks/index.ts",
+          "start_line": 20,
+          "end_line": 20,
+          "snippet": "const query = `"
+        },
+        {
+          "file": "supabase/functions/search-tasks/index.ts",
+          "start_line": 21,
+          "end_line": 21,
+          "snippet": "SELECT id, title, description, status"
+        },
+        {
+          "file": "supabase/functions/search-tasks/index.ts",
+          "start_line": 25,
+          "end_line": 25,
+          "snippet": "LIMIT 25"
+        },
+        {
+          "file": "supabase/functions/search-tasks/index.ts",
+          "start_line": 26,
+          "end_line": 26,
+          "snippet": "`;"
+        }
+      ],
+      "description": "The endpoint retrieves the query parameter 'q' and directly interpolates it into a raw SQL query string executed via sql.unsafe(). An attacker can supply malicious input containing SQL command syntax or quotes to alter the query structure and access unauthorized data in the database.",
+      "impact": "An unauthenticated attacker can extract arbitrary data from the database, potentially including sensitive records across all projects and users, bypassing application logic and row-level security.",
+      "recommendation": "Use parameterized queries or the template literal syntax supported by the postgres library instead of sql.unsafe() with string interpolation.",
+      "secure_code": "const tasks = await sql`\n      SELECT id, title, description, status\n      FROM public.tasks\n      WHERE title ILIKE ${'%' + searchTerm + '%'}\n      ORDER BY created_at DESC\n      LIMIT 25\n    `;",
+      "secure_code_lang": "typescript",
+      "validation_notes": "User-controlled request input is present in this handler and the query is executed through a raw/unsafe API, so the interpolated value reaches the database unescaped.",
+      "owasp": "A03:2021 Injection",
+      "rule_id": "CW-JS-SQLI-001",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/89.html",
+        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+      ],
+      "id": "CW-001"
+    },
+    {
+      "title": "Privileged database client used without authenticating the caller (write path bypasses Row Level Security)",
+      "category": "Broken Access Control",
+      "cwe": "CWE-862",
+      "severity": "Critical",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/functions/update-task/index.ts",
+          "start_line": 31,
+          "end_line": 31,
+          "snippet": "const supabase = createClient("
+        },
+        {
+          "file": "supabase/functions/update-task/index.ts",
+          "start_line": 11,
+          "end_line": 11,
+          "snippet": "Deno.serve(async (request: Request) => {"
+        }
+      ],
+      "description": "A server/edge request handler performs database operations with a privileged credential (service role / admin key / direct DB connection) but never verifies who is calling or whether they own the records they reference.",
+      "impact": "Any unauthenticated user who can reach the endpoint can read or modify other users' data by supplying arbitrary identifiers; database Row Level Security is bypassed by the privileged credential.",
+      "recommendation": "Authenticate every request (verify the JWT from the Authorization header), then either query with a client scoped to the caller's token so RLS applies, or explicitly enforce ownership in the query. Reserve service-role keys for trusted back-office jobs.",
+      "secure_code": "import { createClient } from \"npm:@supabase/supabase-js@2\";\n\nDeno.serve(async (req: Request) => {\n  const authHeader = req.headers.get(\"Authorization\");\n  if (!authHeader) return Response.json({ error: \"Unauthorized\" }, { status: 401 });\n\n  // Client scoped to the caller's JWT -> Row Level Security is enforced\n  const supabase = createClient(\n    Deno.env.get(\"SUPABASE_URL\")!,\n    Deno.env.get(\"SUPABASE_ANON_KEY\")!,\n    { global: { headers: { Authorization: authHeader } } },\n  );\n\n  const { data: { user }, error } = await supabase.auth.getUser();\n  if (error || !user) return Response.json({ error: \"Unauthorized\" }, { status: 401 });\n\n  // ...queries now run as `user` and are filtered by RLS policies\n});",
+      "secure_code_lang": "typescript",
+      "validation_notes": "The handler builds a client with a service-role/admin credential, which bypasses database access policies, and no caller authentication or ownership check was found in the file. Record identifiers are taken directly from the request, enabling insecure direct object references (IDOR).",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-JS-AUTHZ-001",
+      "source": "rule",
+      "ai_reviewed": false,
+      "ai_severity_change": "",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/862.html",
+        "https://supabase.com/docs/guides/functions/auth"
+      ],
+      "id": "CW-002"
+    },
+    {
+      "title": "Cross-Site Scripting (XSS) via dangerouslySetInnerHTML",
+      "category": "Cross-Site Scripting (XSS)",
+      "cwe": "CWE-79",
+      "severity": "High",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "src/components/TaskComments.tsx",
+          "start_line": 40,
+          "end_line": 42,
+          "snippet": "dangerouslySetInnerHTML={{\n                  __html: comment.text,\n                }}"
+        }
+      ],
+      "description": "The component renders comment text using React's dangerouslySetInnerHTML property without prior HTML sanitisation. If an attacker can inject malicious JavaScript via task comments, it will execute in the browser of any user viewing the comment.",
+      "impact": "An attacker can steal session tokens, execute arbitrary actions on behalf of other users, or deface the application interface.",
+      "recommendation": "Avoid using dangerouslySetInnerHTML for user-generated content. Render the text as standard child content or use a robust sanitisation library like DOMPurify before insertion.",
+      "secure_code": "<div>{comment.text}</div>",
+      "secure_code_lang": "typescript",
+      "validation_notes": "The HTML comes from `comment.text` and is inserted without sanitisation.",
+      "owasp": "A03:2021 Injection",
+      "rule_id": "CW-JS-XSS-001",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/79.html",
+        "https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html"
+      ],
+      "id": "CW-003"
+    },
+    {
+      "title": "Privileged database client used without authenticating the caller (read path bypasses Row Level Security)",
+      "category": "Broken Access Control",
+      "cwe": "CWE-862",
+      "severity": "High",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/functions/get-profile/index.ts",
+          "start_line": 23,
+          "end_line": 23,
+          "snippet": "const supabase = createClient("
+        },
+        {
+          "file": "supabase/functions/get-profile/index.ts",
+          "start_line": 4,
+          "end_line": 4,
+          "snippet": "Deno.serve(async (request: Request) => {"
+        }
+      ],
+      "description": "A server/edge request handler performs database operations with a privileged credential (service role / admin key / direct DB connection) but never verifies who is calling or whether they own the records they reference.",
+      "impact": "Any unauthenticated user who can reach the endpoint can read or modify other users' data by supplying arbitrary identifiers; database Row Level Security is bypassed by the privileged credential.",
+      "recommendation": "Authenticate every request (verify the JWT from the Authorization header), then either query with a client scoped to the caller's token so RLS applies, or explicitly enforce ownership in the query. Reserve service-role keys for trusted back-office jobs.",
+      "secure_code": "import { createClient } from \"npm:@supabase/supabase-js@2\";\n\nDeno.serve(async (req: Request) => {\n  const authHeader = req.headers.get(\"Authorization\");\n  if (!authHeader) return Response.json({ error: \"Unauthorized\" }, { status: 401 });\n\n  // Client scoped to the caller's JWT -> Row Level Security is enforced\n  const supabase = createClient(\n    Deno.env.get(\"SUPABASE_URL\")!,\n    Deno.env.get(\"SUPABASE_ANON_KEY\")!,\n    { global: { headers: { Authorization: authHeader } } },\n  );\n\n  const { data: { user }, error } = await supabase.auth.getUser();\n  if (error || !user) return Response.json({ error: \"Unauthorized\" }, { status: 401 });\n\n  // ...queries now run as `user` and are filtered by RLS policies\n});",
+      "secure_code_lang": "typescript",
+      "validation_notes": "The handler builds a client with a service-role/admin credential, which bypasses database access policies, and no caller authentication or ownership check was found in the file. Record identifiers are taken directly from the request, enabling insecure direct object references (IDOR).",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-JS-AUTHZ-001",
+      "source": "rule",
+      "ai_reviewed": false,
+      "ai_severity_change": "",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/862.html",
+        "https://supabase.com/docs/guides/functions/auth"
+      ],
+      "id": "CW-004"
+    },
+    {
+      "title": "Missing Authentication and RLS Bypass in Edge Function",
+      "category": "Broken Access Control",
+      "cwe": "CWE-862",
+      "severity": "High",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/functions/search-tasks/index.ts",
+          "start_line": 15,
+          "end_line": 15,
+          "snippet": "const sql = postgres("
+        },
+        {
+          "file": "supabase/functions/search-tasks/index.ts",
+          "start_line": 4,
+          "end_line": 4,
+          "snippet": "Deno.serve(async (request: Request) => {"
+        }
+      ],
+      "description": "The edge function connects directly to the PostgreSQL database using a connection string from Deno.env.get(\"DATABASE_URL\"). This client operates outside of Supabase's PostgREST context and bypasses Row Level Security (RLS) policies defined in the migrations. Furthermore, the endpoint does not check for an Authorization header or validate the user's JWT session.",
+      "impact": "Any anonymous user can query all tasks in the database without authentication or authorization checks, violating the security policy that tasks should be filtered appropriately.",
+      "recommendation": "Extract and validate the Authorization bearer token from the incoming request using the Supabase auth client or verify the JWT, and use the Supabase client library with the user's JWT so that RLS policies are enforced.",
+      "secure_code": "// Recommended: Use the Supabase JS client with the user's auth token to respect RLS",
+      "secure_code_lang": "typescript",
+      "validation_notes": "Assumes DATABASE_URL points to a privileged connection bypassing RLS.",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-JS-AUTHZ-001",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "Medium -> High",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/862.html",
+        "https://supabase.com/docs/guides/functions/auth"
+      ],
+      "id": "CW-005"
+    },
+    {
+      "title": "Privilege Escalation via Unrestricted Column Updates on Profiles",
+      "category": "Database Access Control",
+      "cwe": "CWE-269",
+      "severity": "High",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/migrations/002_access_policies.sql",
+          "start_line": 20,
+          "end_line": 20,
+          "snippet": "CREATE POLICY \"Users can update own profile\"\nON public.profiles\nFOR UPDATE\nTO authenticated\nUSING (id = auth.uid())\nWITH CHECK (id = auth.uid());"
+        }
+      ],
+      "description": "The UPDATE policy on the profiles table restricts row access correctly by ID, but does not prevent users from modifying sensitive columns such as 'role'. PostgreSQL RLS controls row visibility and mutation, not individual columns.",
+      "impact": "A standard authenticated user can update their profile row and set their role to 'admin', leading to privilege escalation.",
+      "recommendation": "Use a trigger or column-level permissions (or a security definer function) to prevent users from updating the 'role' column themselves.",
+      "secure_code": "CREATE POLICY \"Users can update own profile\" \nON public.profiles \nFOR UPDATE \nTO authenticated \nUSING (id = auth.uid()) \nWITH CHECK (id = auth.uid() AND role = (SELECT role FROM public.profiles WHERE id = auth.uid()));",
+      "secure_code_lang": "sql",
+      "validation_notes": "Policy \"Users can update own profile\" lets a user update their own row in `profiles`, but RLS is row-level only: nothing prevents them from changing the privileged column(s) `role` (e.g. setting role = 'admin'). No column-level REVOKE/GRANT or trigger protecting these columns was found.",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-SQL-RLS-004",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "",
+      "references": [
+        "https://supabase.com/docs/guides/database/postgres/row-level-security",
+        "https://cwe.mitre.org/data/definitions/284.html",
+        "https://cwe.mitre.org/data/definitions/269.html"
+      ],
+      "id": "CW-006"
+    },
+    {
+      "title": "Over-permissive RLS Read Policy on Tasks Table",
+      "category": "Database Access Control",
+      "cwe": "CWE-284",
+      "severity": "High",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/migrations/002_access_policies.sql",
+          "start_line": 38,
+          "end_line": 38,
+          "snippet": "CREATE POLICY \"Users can view tasks\"\nON public.tasks\nFOR SELECT\nTO authenticated\nUSING (true);"
+        }
+      ],
+      "description": "The RLS select policy on the tasks table allows any authenticated user to read all task records because the condition is set to 'true'. This violates the expected hierarchy where tasks should only be visible if the user owns or has access to the parent project.",
+      "impact": "Authenticated attackers can enumerate and read all task details across all users and projects within the system.",
+      "recommendation": "Restrict the SELECT policy on tasks to ensure users can only view tasks belonging to projects they own or have access to.",
+      "secure_code": "USING (EXISTS (SELECT 1 FROM public.projects WHERE projects.id = tasks.project_id AND projects.owner_id = auth.uid()));",
+      "secure_code_lang": "sql",
+      "validation_notes": "Policy \"Users can view tasks\" lets every signed-in user read every row of `tasks` (USING (true)). The table records ownership in `owner_id`, but the policy ignores it, so users can read records that belong to other users. This is inconsistent with the parent table `projects`, whose SELECT policy is restricted to the owner: rows of `tasks` leak data about projects the user cannot otherwise see.",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-SQL-RLS-001",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "",
+      "references": [
+        "https://supabase.com/docs/guides/database/postgres/row-level-security",
+        "https://cwe.mitre.org/data/definitions/284.html"
+      ],
+      "id": "CW-007"
+    },
+    {
+      "title": "Mass assignment: request body written to the database unfiltered",
+      "category": "Mass Assignment",
+      "cwe": "CWE-915",
+      "severity": "High",
+      "confidence": "Medium",
+      "status": "Needs validation",
+      "locations": [
+        {
+          "file": "supabase/functions/update-task/index.ts",
+          "start_line": 38,
+          "end_line": 38,
+          "snippet": ".update(changes)"
+        }
+      ],
+      "description": "An object taken directly from the request body is passed to an update/insert call, so the client decides which columns are written.",
+      "impact": "Attackers can modify fields they should never control (ownership, role, status, foreign keys, timestamps), e.g. re-assigning a record to themselves or moving it into another tenant.",
+      "recommendation": "Validate the payload with a schema and copy only an explicit allow-list of editable fields; derive ownership and identifiers from the authenticated session, never from the body.",
+      "secure_code": "// Copy only the fields a client may edit; never ids, owners or roles\nconst { id, changes } = await req.json();\nconst update: { name?: string; description?: string } = {};\nif (typeof changes?.name === \"string\") update.name = changes.name.slice(0, 200);\nif (typeof changes?.description === \"string\") update.description = changes.description.slice(0, 5000);\nif (Object.keys(update).length === 0) {\n  return Response.json({ error: \"No valid fields\" }, { status: 400 });\n}\n\nawait supabase.from(\"items\").update(update).eq(\"id\", id); // user-scoped client so RLS applies",
+      "secure_code_lang": "typescript",
+      "validation_notes": "`changes` comes straight from the request body and is written without an allow-list of fields.",
+      "owasp": "A08:2021 Software and Data Integrity Failures",
+      "rule_id": "CW-JS-MASS-001",
+      "source": "rule",
+      "ai_reviewed": false,
+      "ai_severity_change": "",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/915.html",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html"
+      ],
+      "id": "CW-008"
+    },
+    {
+      "title": "Over-permissive RLS read policy on `profiles` (USING true)",
+      "category": "Database Access Control",
+      "cwe": "CWE-284",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/migrations/002_access_policies.sql",
+          "start_line": 13,
+          "end_line": 13,
+          "snippet": "CREATE POLICY \"Users can view profiles\"\nON public.profiles\nFOR SELECT\nTO authenticated\nUSING (true);"
+        }
+      ],
+      "description": "A Row Level Security SELECT policy uses `USING (true)`, which makes every row visible to every user in the granted role, regardless of who owns the data.",
+      "impact": "Any authenticated user can query the table directly through the auto-generated API and read other users' records (horizontal privilege escalation / data exposure).",
+      "recommendation": "Replace `true` with a predicate that ties rows to the caller (ownership or project/team membership via auth.uid()). If some data must be public, expose it through a view containing only the non-sensitive columns.",
+      "secure_code": "DROP POLICY IF EXISTS \"Users can view profiles\" ON public.profiles;\nCREATE POLICY \"Users can view profiles (scoped)\"\nON public.profiles\nFOR SELECT\nTO authenticated\nUSING (\n  id = (SELECT auth.uid())\n);\n\n-- If other users genuinely need some fields, expose only those via a view:\n-- CREATE VIEW public.profiles_public AS SELECT id, full_name, bio FROM public.profiles;",
+      "secure_code_lang": "sql",
+      "validation_notes": "Policy \"Users can view profiles\" lets every signed-in user read every row of `profiles` (USING (true)). Rows are per-user records; confirm that exposing all of them (including every column) to all users is an intended product decision (e.g. a public directory). AI review: The policy permits any authenticated user to select all rows in the profiles table, which may expose sensitive user details across the application if intended as private.",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-SQL-RLS-001",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "",
+      "references": [
+        "https://supabase.com/docs/guides/database/postgres/row-level-security",
+        "https://cwe.mitre.org/data/definitions/284.html"
+      ],
+      "id": "CW-009"
+    },
+    {
+      "title": "Missing Parent Project Ownership Check on Task Creation and Updates",
+      "category": "Database Access Control",
+      "cwe": "CWE-639",
+      "severity": "Medium",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/migrations/002_access_policies.sql",
+          "start_line": 44,
+          "end_line": 44,
+          "snippet": "CREATE POLICY \"Users can create tasks\"\nON public.tasks\nFOR INSERT\nTO authenticated\nWITH CHECK (owner_id = auth.uid());"
+        },
+        {
+          "file": "supabase/migrations/002_access_policies.sql",
+          "start_line": 51,
+          "end_line": 51,
+          "snippet": "CREATE POLICY \"Users can update tasks\"\nON public.tasks\nFOR UPDATE\nTO authenticated\nUSING (owner_id = auth.uid())\nWITH CHECK (owner_id = auth.uid());"
+        }
+      ],
+      "description": "The INSERT and UPDATE policies on the tasks table verify only that the task's owner_id matches the current user, failing to ensure that the project_id points to a project owned by the user.",
+      "impact": "An attacker can create or reassign tasks under other users' projects, corrupting project data and violating data isolation boundaries.",
+      "recommendation": "Include an existence check in the WITH CHECK expression to guarantee the target project belongs to the authenticated user.",
+      "secure_code": "WITH CHECK (owner_id = auth.uid() AND EXISTS (SELECT 1 FROM public.projects WHERE projects.id = project_id AND projects.owner_id = auth.uid()));",
+      "secure_code_lang": "sql",
+      "validation_notes": "The INSERT/UPDATE policies on `tasks` only check the row's own owner column. They never verify that `project_id` points to a `projects` row the user is allowed to access, so a user can create or move `tasks` rows under another user's `projects`.",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-SQL-RLS-005",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "",
+      "references": [
+        "https://supabase.com/docs/guides/database/postgres/row-level-security",
+        "https://cwe.mitre.org/data/definitions/284.html"
+      ],
+      "id": "CW-010"
+    },
+    {
+      "title": "RLS policy on `task_comments` does not scope rows to the current user",
+      "category": "Database Access Control",
+      "cwe": "CWE-863",
+      "severity": "Medium",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/migrations/002_access_policies.sql",
+          "start_line": 57,
+          "end_line": 57,
+          "snippet": "CREATE POLICY \"Users can view task comments\"\nON public.task_comments\nFOR SELECT\nTO authenticated\nUSING (\n  EXISTS (\n    SELECT 1\n    FROM public.tasks\n    WHERE tasks.id = task_comments.task_id\n  )\n);"
+        }
+      ],
+      "description": "The policy relies on an EXISTS/IN subquery that only checks that a related row exists, without comparing it to the authenticated user. It looks restrictive but filters nothing user-specific.",
+      "impact": "Users can read rows (e.g. comments) attached to records they should not have access to.",
+      "recommendation": "Make the subquery join to the parent and compare the parent's owner/membership with auth.uid().",
+      "secure_code": "DROP POLICY IF EXISTS \"Users can view task comments\" ON public.task_comments;\nCREATE POLICY \"Users can view task comments (scoped)\"\nON public.task_comments\nFOR SELECT\nTO authenticated\nUSING (\n  EXISTS (\n    SELECT 1\n    FROM public.tasks x\n    JOIN public.projects gp ON gp.id = x.project_id\n    WHERE x.id = task_comments.task_id\n      AND (x.owner_id = (SELECT auth.uid()) OR gp.owner_id = (SELECT auth.uid()))\n  )\n);",
+      "secure_code_lang": "sql",
+      "validation_notes": "The subquery in policy \"Users can view task comments\" only checks that a related `tasks` row exists; it never compares anything with auth.uid(), so it does not restrict access to the current user. Because `tasks` is itself readable by every authenticated user, this policy effectively exposes every row of `task_comments`. AI review: The SELECT policy on task_comments allows reading any comment as long as a corresponding task exists, effectively bypassing comment-level isolation.",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-SQL-RLS-003",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "",
+      "references": [
+        "https://supabase.com/docs/guides/database/postgres/row-level-security",
+        "https://cwe.mitre.org/data/definitions/284.html"
+      ],
+      "id": "CW-011"
+    },
+    {
+      "title": "RLS write policy on `task_comments` does not verify access to parent `tasks`",
+      "category": "Database Access Control",
+      "cwe": "CWE-639",
+      "severity": "Medium",
+      "confidence": "Medium",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/migrations/002_access_policies.sql",
+          "start_line": 69,
+          "end_line": 69,
+          "snippet": "CREATE POLICY \"Users can add task comments\"\nON public.task_comments\nFOR INSERT\nTO authenticated\nWITH CHECK (author_id = auth.uid());"
+        }
+      ],
+      "description": "INSERT/UPDATE policies check only the new row's owner column; the foreign key that links the row to a parent (project, task, organisation) is not validated against the caller's access.",
+      "impact": "Users can attach records to resources owned by others (e.g. inject tasks or comments into another user's project), polluting data and enabling spam, phishing content or confused-deputy issues.",
+      "recommendation": "Add a membership/ownership check on the parent in WITH CHECK (and USING for updates).",
+      "secure_code": "DROP POLICY IF EXISTS \"Users can add task comments\" ON public.task_comments;\nCREATE POLICY \"Users can add task comments (parent-checked)\"\nON public.task_comments\nFOR INSERT\nTO authenticated\nWITH CHECK (\n  author_id = auth.uid()\n  AND EXISTS (\n    SELECT 1 FROM public.tasks x\n    WHERE x.id = task_comments.task_id\n      AND x.owner_id = (SELECT auth.uid())\n  )\n);\n-- Apply the same parent check to any UPDATE policy (in both USING and WITH CHECK).",
+      "secure_code_lang": "sql",
+      "validation_notes": "The INSERT policy on `task_comments` only checks the row's own owner column. It never verifies that `task_id` points to a `tasks` row the user is allowed to access, so a user can create `task_comments` rows under another user's `tasks`. AI review: The task_comments INSERT policy does not check if the user has access to the parent task via task_id.",
+      "owasp": "A01:2021 Broken Access Control",
+      "rule_id": "CW-SQL-RLS-005",
+      "source": "rule+ai",
+      "ai_reviewed": true,
+      "ai_severity_change": "",
+      "references": [
+        "https://supabase.com/docs/guides/database/postgres/row-level-security",
+        "https://cwe.mitre.org/data/definitions/284.html"
+      ],
+      "id": "CW-012"
+    },
+    {
+      "title": "Internal error details returned to the client",
+      "category": "Information Disclosure",
+      "cwe": "CWE-209",
+      "severity": "Low",
+      "confidence": "High",
+      "status": "Confirmed",
+      "locations": [
+        {
+          "file": "supabase/functions/get-profile/index.ts",
+          "start_line": 44,
+          "end_line": 44,
+          "snippet": "{ error: String(error) },"
+        },
+        {
+          "file": "supabase/functions/update-task/index.ts",
+          "start_line": 58,
+          "end_line": 58,
+          "snippet": "details: String(error),"
+        }
+      ],
+      "description": "Raw exception text (database/driver messages, stack traces) is serialised into HTTP responses.",
+      "impact": "Error messages reveal table/column names, constraint names, query fragments and infrastructure details that help attackers refine injection and access-control attacks.",
+      "recommendation": "Log the full error server-side with a correlation ID and return a generic message to the client.",
+      "secure_code": "} catch (error) {\n  const requestId = crypto.randomUUID();\n  console.error(`[${requestId}] request failed`, error);\n  return Response.json({ error: \"Internal error\", requestId }, { status: 500 });\n}",
+      "secure_code_lang": "typescript",
+      "validation_notes": "",
+      "owasp": "A05:2021 Security Misconfiguration",
+      "rule_id": "CW-JS-ERRLEAK-001",
+      "source": "rule",
+      "ai_reviewed": false,
+      "ai_severity_change": "",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/209.html"
+      ],
+      "id": "CW-013"
+    },
+    {
+      "title": "Permissive CORS policy (Access-Control-Allow-Origin: *)",
+      "category": "Security Misconfiguration",
+      "cwe": "CWE-942",
+      "severity": "Low",
+      "confidence": "Medium",
+      "status": "Needs validation",
+      "locations": [
+        {
+          "file": "supabase/functions/update-task/index.ts",
+          "start_line": 5,
+          "end_line": 5,
+          "snippet": "\"Access-Control-Allow-Origin\": \"*\","
+        }
+      ],
+      "description": "The API allows requests from any origin.",
+      "impact": "Any website can invoke the API from a visitor's browser and read responses. Severity rises sharply if credentials are allowed or the endpoint lacks authentication.",
+      "recommendation": "Return an explicit allow-list of trusted origins and only echo the request Origin when it matches.",
+      "secure_code": "const ALLOWED_ORIGINS = new Set([\"https://app.example.com\"]);\nconst origin = req.headers.get(\"Origin\") ?? \"\";\nconst corsHeaders = {\n  \"Access-Control-Allow-Origin\": ALLOWED_ORIGINS.has(origin) ? origin : \"\",\n  \"Vary\": \"Origin\",\n  \"Access-Control-Allow-Headers\": \"authorization, content-type\",\n  \"Access-Control-Allow-Methods\": \"POST, OPTIONS\",\n};",
+      "secure_code_lang": "typescript",
+      "validation_notes": "Any website can call this endpoint from a victim's browser. Impact is limited when authentication relies on bearer tokens that other origins cannot read, but it widens the attack surface (e.g. combined with missing authentication or token leakage).",
+      "owasp": "A05:2021 Security Misconfiguration",
+      "rule_id": "CW-JS-CORS-001",
+      "source": "rule",
+      "ai_reviewed": false,
+      "ai_severity_change": "",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/942.html"
+      ],
+      "id": "CW-014"
+    }
+  ]
+}

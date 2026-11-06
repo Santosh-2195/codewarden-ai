@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CodeWarden AI - AI security code review</title>
+<meta name="description" content="CodeWarden AI finds security vulnerabilities in source code, explains them with line-level evidence and proposes secure fixes. Built for the CDF CyberSec Hackathon.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%A1%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+:root{--paper:#F3F5F7;--surface:#FFFFFF;--ink:#17202A;--muted:#566270;--line:#D8DDE3;--brand:#0B6E69;--brand-ink:#FFFFFF;
+--code-bg:#0F1A22;--code-ink:#D6E1E8;--code-muted:#6F8594;--hit:#3B1D20;--crit:#A11423;--crit-soft:#FF7A84;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--paper:#11161C;--surface:#182029;--ink:#E5E9ED;--muted:#9BA6B2;--line:#2B3540;
+--brand:#4FC2B8;--brand-ink:#08201E;--code-bg:#0B1117;--crit:#FF6B76;color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+code,pre{font-family:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:2px solid var(--ink)}
+nav b{font-size:18px;letter-spacing:-.01em}
+nav a{color:var(--ink);text-decoration:none;margin-left:20px;font-size:15px}
+nav a:hover{text-decoration:underline}
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;padding:64px 0 56px}
+h1{font-size:clamp(34px,5.2vw,58px);line-height:1.04;letter-spacing:-.03em;margin:0 0 20px}
+.lead{font-size:19px;color:var(--muted);max-width:46ch;margin:0 0 28px}
+.cta{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-block;padding:12px 20px;border-radius:3px;font-weight:600;text-decoration:none;border:2px solid var(--ink);color:var(--ink)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.finding{background:var(--code-bg);color:var(--code-ink);border-left:6px solid var(--crit-soft);font-size:13.5px;line-height:1.55;overflow-x:auto}
+.finding header{padding:14px 18px 10px;border-bottom:1px solid #22313C;font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif}
+.finding header strong{color:#FF9AA2;margin-right:10px}
+.finding header span{color:var(--code-muted);font-size:13px;display:block;margin-top:2px}
+.finding pre{margin:0;padding:12px 0}
+.finding .l{display:block;padding:0 18px;white-space:pre}
+.finding .l i{font-style:normal;color:var(--code-muted);display:inline-block;width:2.6em;user-select:none}
+.finding .l.hit{background:var(--hit);box-shadow:inset 3px 0 0 var(--crit-soft)}
+.finding footer{padding:10px 18px 14px;border-top:1px solid #22313C;color:#A9E3D8;white-space:pre}
+section{padding:56px 0;border-top:1px solid var(--line)}
+h2{font-size:28px;letter-spacing:-.02em;margin:0 0 10px}
+.sub{color:var(--muted);max-width:62ch;margin:0 0 28px}
+ol.flow{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-width:1px 0 0 1px;background:var(--surface)}
+ol.flow li{padding:18px 18px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);counter-increment:step}
+ol.flow li::before{content:counter(step);display:block;font-weight:700;font-size:22px;color:var(--brand);margin-bottom:4px}
+ol.flow b{display:block;margin-bottom:4px}
+ol.flow p{margin:0;color:var(--muted);font-size:15px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px}
+.cols h3{margin:0 0 6px;font-size:18px}
+.cols p{margin:0;color:var(--muted)}
+pre.cmd{background:var(--surface);border:1px solid var(--line);padding:16px 18px;overflow-x:auto;font-size:14px;line-height:1.6;margin:0}
+.links a{color:var(--brand)}
+footer.site{padding:28px 0 48px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+@media (max-width:880px){.hero{grid-template-columns:1fr;padding-top:40px}ol.flow{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){ol.flow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav aria-label="Main">
+  <b>CodeWarden AI</b>
+  <div><a href="report.html">Sample report</a><a href="#run">Run it</a><a href="https://github.com/Santosh-2195/codewarden-ai">GitHub</a></div>
+</nav>
+
+<div class="hero">
+  <div>
+    <h1>Find the flaw. See the line. Paste the fix.</h1>
+    <p class="lead">CodeWarden AI reviews a codebase for security weaknesses, verifies each one against the actual source, and writes a report developers can act on the same day.</p>
+    <div class="cta">
+      <a class="btn primary" href="report.html">Read the sample report</a>
+      <a class="btn" href="https://github.com/Santosh-2195/codewarden-ai">View the source</a>
+    </div>
+  </div>
+  <figure class="finding" aria-label="Example finding from the sample report" style="margin:0">
+    <header><strong>Critical</strong>SQL injection via string-built query<span>supabase/functions/search-tasks/index.ts:23 &middot; CWE-89 &middot; Confirmed</span></header>
+<pre><span class="l"><i>20</i>    const query = `</span><span class="l"><i>21</i>      SELECT id, title, description, status</span><span class="l"><i>22</i>      FROM public.tasks</span><span class="l hit"><i>23</i>      WHERE title ILIKE '%${searchTerm}%'</span><span class="l"><i>24</i>      ORDER BY created_at DESC</span><span class="l"><i>28</i>    const tasks = await sql.unsafe(query);</span></pre>
+    <footer>fix: const tasks = await sql`... WHERE title ILIKE ${pattern} ...`;</footer>
+  </figure>
+</div>
+</div>
+
+<section>
+<div class="wrap">
+  <h2>How a review runs</h2>
+  <p class="sub">Rules give coverage and precision; the language model adds judgement. Every claim it makes has to point at a real line of code.</p>
+  <ol class="flow">
+    <li><b>Collect</b><p>Load a folder, ZIP or GitHub URL. Code is treated as data and never executed.</p></li>
+    <li><b>Detect</b><p>38 generic rules flag secrets, injection, XSS, broken access control and database policy gaps.</p></li>
+    <li><b>Mask</b><p>Credential-like values are redacted before any code is sent to an AI provider.</p></li>
+    <li><b>Review</b><p>The model triages every candidate, rejects false positives and finds logic flaws rules miss.</p></li>
+    <li><b>Ground</b><p>Findings whose evidence line cannot be found in the file are dropped.</p></li>
+    <li><b>Report</b><p>Merged findings, attack chains and a prioritised plan in HTML, Markdown, JSON and SARIF.</p></li>
+  </ol>
+</div>
+</section>
+
+<section>
+<div class="wrap cols">
+  <div><h3>Understands database access control</h3><p>Reads every migration together: tables, foreign keys, RLS policies and grants, to catch privilege escalation and cross-tenant reads that single-file scanners miss.</p></div>
+  <div><h3>Honest about uncertainty</h3><p>Each finding is marked Confirmed or Needs validation with the assumption spelled out. Placeholder secrets are not reported as leaked credentials.</p></div>
+  <div><h3>Fixes, not just alerts</h3><p>Every finding ships a secure code snippet written for the same file, framework and table names, ready to paste and test.</p></div>
+</div>
+</section>
+
+<section id="run">
+<div class="wrap">
+  <h2>Run it on your code</h2>
+  <p class="sub">Python 3.9 or newer, no packages to install. Bring a Gemini, Claude, OpenAI or Groq key, or run a local model with Ollama.</p>
+<pre class="cmd">git clone https://github.com/Santosh-2195/codewarden-ai.git
+cd codewarden-ai
+copy .env.example .env        (then add one API key)
+python -m codewarden serve    (web interface)
+python -m codewarden scan path\to\project --project "My App"</pre>
+  <p class="sub links" style="margin-top:20px">Also available: <a href="baseline-report.html">rules-only baseline report</a>, and the sample report as <a href="downloads/sample-report.md">Markdown</a>, <a href="downloads/sample-report.json">JSON</a> and <a href="downloads/sample-report.sarif">SARIF</a>.</p>
+</div>
+</section>
+
+<div class="wrap">
+<footer class="site">Built for the CDF CyberSec Hackathon 2026: Intelligent Code Security Challenge. The analysed sample application is intentionally vulnerable and is not deployed here; this site only hosts reports.</footer>
+</div>
+</body>
+</html>
