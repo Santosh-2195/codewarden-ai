@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CodeWarden AI</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%A1%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+:root{--paper:#F3F5F7;--surface:#FFFFFF;--ink:#17202A;--muted:#566270;--line:#D8DDE3;--brand:#0B6E69;--brand-ink:#FFFFFF;
+--code-bg:#F7F8FA;--crit:#A11423;--high:#C2410C;--med:#946200;--low:#235AA6;--info:#5B6472;--err:#A11423;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--paper:#11161C;--surface:#182029;--ink:#E5E9ED;--muted:#9BA6B2;--line:#2B3540;
+--brand:#4FC2B8;--brand-ink:#08201E;--code-bg:#0F141A;--crit:#FF6B76;--high:#FF8A4C;--med:#E6B84A;--low:#7FB0FF;--info:#9BA6B2;--err:#FF6B76;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif}
+code,pre,.mono{font-family:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 48px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:24px}
+header h1{margin:0;font-size:30px;letter-spacing:-.02em;line-height:1.1}
+header p{margin:4px 0 0;color:var(--muted)}
+header small{color:var(--muted)}
+.grid{display:grid;grid-template-columns:380px 1fr;gap:24px;align-items:start}
+@media (max-width:960px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);padding:20px}
+h2{font-size:18px;margin:0 0 14px}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
+.hint{font-size:13px;color:var(--muted);margin:4px 0 0}
+input[type=text],input[type=password],input[type=url],select{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:3px}
+.tabs{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.tabs button{flex:1;font:inherit;font-size:14px;padding:8px;border:0;background:var(--surface);color:var(--ink);cursor:pointer;border-right:1px solid var(--line)}
+.tabs button:last-child{border-right:0}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--paper)}
+.drop{margin-top:12px;border:2px dashed var(--line);padding:22px 14px;text-align:center;cursor:pointer;border-radius:3px}
+.drop.over{border-color:var(--brand)}
+.drop strong{display:block}
+.drop span{font-size:13px;color:var(--muted)}
+.run{margin-top:20px;width:100%;font:inherit;font-weight:700;font-size:16px;padding:12px;border:0;border-radius:3px;background:var(--brand);color:var(--brand-ink);cursor:pointer}
+.run[disabled]{opacity:.55;cursor:progress}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.empty{color:var(--muted);padding:40px 10px;text-align:center}
+.empty strong{display:block;color:var(--ink);font-size:17px;margin-bottom:6px}
+.log{background:var(--code-bg);border:1px solid var(--line);font-size:12.5px;line-height:1.5;max-height:220px;overflow:auto;padding:10px 12px;white-space:pre-wrap;margin:0 0 18px}
+.err{color:var(--err);font-weight:600}
+.summary{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;margin-bottom:12px}
+.rating{border:2px solid currentColor;padding:10px 16px;min-width:150px}
+.rating span{display:block;font-size:12.5px;color:var(--muted)}
+.rating strong{display:block;font-size:28px;line-height:1.1}
+.r-Critical{color:var(--crit)}.r-High{color:var(--high)}.r-Medium{color:var(--med)}.r-Low{color:var(--low)}
+.bar{display:flex;height:14px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;font-size:14px}
+.legend b{font-size:18px;margin-right:4px}
+.k-Critical{background:var(--crit)}.k-High{background:var(--high)}.k-Medium{background:var(--med)}.k-Low{background:var(--low)}.k-Info{background:var(--info)}
+.t-Critical{color:var(--crit)}.t-High{color:var(--high)}.t-Medium{color:var(--med)}.t-Low{color:var(--low)}.t-Info{color:var(--info)}
+.exec{margin:14px 0 18px;max-width:80ch}
+.downloads{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px}
+.downloads a{font-size:14px;padding:7px 12px;border:1px solid var(--line);border-radius:3px;color:var(--ink);text-decoration:none;background:var(--surface)}
+.downloads a.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+details.f{border:1px solid var(--line);border-left:6px solid var(--sev);margin-bottom:8px;background:var(--surface)}
+details.f>summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:70px 84px 1fr;gap:10px;padding:10px 14px;align-items:baseline}
+details.f>summary::-webkit-details-marker{display:none}
+details.f .loc{grid-column:3;font-size:12.5px;color:var(--muted);word-break:break-all}
+details.f .sev{font-weight:700;color:var(--sev)}
+details.f .body{border-top:1px solid var(--line);padding:6px 16px 14px}
+details.f h4{margin:14px 0 4px;font-size:14px}
+details.f p{margin:0 0 8px;max-width:80ch}
+details.f pre{background:var(--code-bg);border:1px solid var(--line);padding:10px 12px;overflow-x:auto;font-size:12.5px;margin:4px 0 8px}
+.facts{font-size:13px;color:var(--muted);margin-top:8px}
+.sev-Critical{--sev:var(--crit)}.sev-High{--sev:var(--high)}.sev-Medium{--sev:var(--med)}.sev-Low{--sev:var(--low)}.sev-Info{--sev:var(--info)}
+.metrics{font-size:13px;color:var(--muted);margin-top:16px}
+.hidden{display:none !important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>CodeWarden AI</h1>
+    <p>Security review for any codebase, with evidence you can check and fixes you can paste.</p>
+  </div>
+  <small>v__CW_VERSION__ &middot; runs locally</small>
+</header>
+
+<div class="grid">
+<section class="card" aria-labelledby="src-h">
+  <h2 id="src-h">Review a codebase</h2>
+  <div class="tabs" role="tablist" aria-label="Source type">
+    <button type="button" role="tab" aria-selected="true" data-mode="zip">ZIP upload</button>
+    <button type="button" role="tab" aria-selected="false" data-mode="path">Local folder</button>
+    <button type="button" role="tab" aria-selected="false" data-mode="github">GitHub URL</button>
+  </div>
+  <div id="pane-zip">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a ZIP file">
+      <strong id="dropText">Drop a .zip here or click to choose</strong>
+      <span>Up to 100 MB. Nothing in the archive is executed.</span>
+    </div>
+    <input type="file" id="file" accept=".zip,application/zip" class="sr">
+  </div>
+  <div id="pane-path" class="hidden">
+    <label for="path">Folder path on this computer</label>
+    <input type="text" id="path" placeholder="C:\projects\my-app\" autocomplete="off">
+  </div>
+  <div id="pane-github" class="hidden">
+    <label for="gh">Public repository URL</label>
+    <input type="url" id="gh" placeholder="https://github.com/owner/repo" autocomplete="off">
+  </div>
+
+  <label for="provider">AI model provider</label>
+  <select id="provider"></select>
+  <p class="hint" id="providerHint"></p>
+  <label for="model">Model (optional)</label>
+  <input type="text" id="model" autocomplete="off">
+  <label for="key">API key (optional)</label>
+  <input type="password" id="key" autocomplete="off" placeholder="Uses the key from .env when empty">
+  <p class="hint">Sent only to this local server and kept in memory for this scan. Secret values in your code are masked before anything is sent to the AI.</p>
+  <label for="name">Application name</label>
+  <input type="text" id="name" autocomplete="off" placeholder="e.g. CDF TaskFlow">
+  <button class="run" id="run" type="button">Run security review</button>
+  <p class="hint err hidden" id="formErr" role="alert"></p>
+</section>
+
+<section class="card" aria-labelledby="res-h" aria-live="polite">
+  <h2 id="res-h">Results</h2>
+  <div class="empty" id="empty"><strong>No review yet</strong>Choose a codebase and run a review. Findings appear here with code evidence, a fix and a downloadable report.</div>
+  <pre class="log hidden" id="log"></pre>
+  <div id="results" class="hidden">
+    <div class="summary">
+      <div class="rating" id="rating"><span>Overall risk</span><strong id="ratingText"></strong><span id="ratingSub"></span></div>
+      <div><div class="bar" id="bar"></div><div class="legend" id="legend"></div></div>
+    </div>
+    <p class="exec" id="exec"></p>
+    <div class="downloads" id="downloads"></div>
+    <div id="findings"></div>
+    <p class="metrics" id="metrics"></p>
+  </div>
+</section>
+</div>
+</div>
+
+<script>
+(function(){
+  var TOKEN = "__CW_TOKEN__";
+  var SEVS = ["Critical","High","Medium","Low","Info"];
+  var mode = "zip", file = null, job = null, since = 0, timer = null;
+  var $ = function(id){ return document.getElementById(id); };
+  function el(tag, attrs, text){ var e=document.createElement(tag); if(attrs){for(var k in attrs){ if(k==="class") e.className=attrs[k]; else e.setAttribute(k, attrs[k]); }} if(text!==undefined&&text!==null) e.textContent=String(text); return e; }
+  function api(path, opts){ opts=opts||{}; opts.headers=opts.headers||{}; opts.headers["X-CW-Token"]=TOKEN;
+    return fetch(path, opts).then(function(r){ return r.json().then(function(j){ if(!r.ok) throw new Error(j.error||("HTTP "+r.status)); return j; }); }); }
+
+  // tabs
+  document.querySelectorAll("[data-mode]").forEach(function(b){
+    b.addEventListener("click", function(){
+      mode=b.dataset.mode;
+      document.querySelectorAll("[data-mode]").forEach(function(x){ x.setAttribute("aria-selected", x===b); });
+      ["zip","path","github"].forEach(function(m){ $("pane-"+m).classList.toggle("hidden", m!==mode); });
+    });
+  });
+  // dropzone
+  var drop=$("drop"), input=$("file");
+  function setFile(f){ if(!f) return; file=f; $("dropText").textContent=f.name+" ("+Math.round(f.size/1024)+" KB)";
+    if(!$("name").value) $("name").value=f.name.replace(/\.zip$/i,"").replace(/-main$|-master$/,""); }
+  drop.addEventListener("click", function(){ input.click(); });
+  drop.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); input.click(); } });
+  input.addEventListener("change", function(){ setFile(input.files[0]); });
+  ["dragenter","dragover"].forEach(function(t){ drop.addEventListener(t, function(e){ e.preventDefault(); drop.classList.add("over"); }); });
+  ["dragleave","drop"].forEach(function(t){ drop.addEventListener(t, function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
+  drop.addEventListener("drop", function(e){ setFile(e.dataTransfer.files[0]); });
+
+  // providers
+  var providers = {};
+  api("/api/config").then(function(cfg){
+    var sel=$("provider");
+    var none=el("option",{value:"none"},"None (rules only, no AI)"); sel.appendChild(none);
+    cfg.providers.forEach(function(p){ providers[p.id]=p;
+      var label=p.id.charAt(0).toUpperCase()+p.id.slice(1)+(p.key_configured?" (key found)":"");
+      sel.appendChild(el("option",{value:p.id},label)); });
+    sel.value = cfg.default_provider || "none";
+    updateHint();
+  }).catch(function(e){ showFormErr("Could not reach the local server: "+e.message); });
+  function updateHint(){
+    var p=providers[$("provider").value];
+    $("model").placeholder = p ? p.default_model : "";
+    $("providerHint").textContent = !p ? "Static rules only. Add an AI provider for verification, explanations and logic-flaw discovery."
+      : (p.key_configured ? "Using the API key from your environment unless you paste one below." : "No key found in .env; paste one below.");
+  }
+  $("provider").addEventListener("change", updateHint);
+
+  function showFormErr(msg){ var e=$("formErr"); e.textContent=msg; e.classList.toggle("hidden", !msg); }
+
+  $("run").addEventListener("click", function(){
+    showFormErr("");
+    var q = "/api/scan?mode="+mode+"&provider="+encodeURIComponent($("provider").value)+
+            "&model="+encodeURIComponent($("model").value.trim())+"&name="+encodeURIComponent($("name").value.trim());
+    var headers = {}; var body;
+    if($("key").value.trim()) headers["X-AI-Key"]=$("key").value.trim();
+    if(mode==="zip"){ if(!file) return showFormErr("Choose a ZIP file first."); body=file; headers["Content-Type"]="application/zip"; }
+    else { var t = mode==="path" ? $("path").value.trim() : $("gh").value.trim();
+      if(!t) return showFormErr(mode==="path" ? "Enter a folder path." : "Enter a GitHub repository URL.");
+      body=JSON.stringify({target:t}); headers["Content-Type"]="application/json"; }
+    $("run").disabled=true; $("run").textContent="Reviewing...";
+    $("empty").classList.add("hidden"); $("results").classList.add("hidden");
+    var log=$("log"); log.textContent=""; log.classList.remove("hidden");
+    api(q,{method:"POST",headers:headers,body:body}).then(function(r){ job=r.job_id; since=0; poll(); })
+      .catch(function(e){ finish(); showFormErr(e.message); });
+  });
+
+  function finish(){ $("run").disabled=false; $("run").textContent="Run security review"; if(timer){clearTimeout(timer);timer=null;} }
+
+  function poll(){
+    api("/api/jobs/"+job+"?since="+since).then(function(s){
+      var log=$("log");
+      s.log.forEach(function(line){ log.appendChild(document.createTextNode(line+"\n")); });
+      since=s.next; log.scrollTop=log.scrollHeight;
+      if(s.status==="running"){ timer=setTimeout(poll, 900); return; }
+      finish();
+      if(s.status==="error"){ var e=el("span",{class:"err"},"Error: "+s.error); log.appendChild(e); return; }
+      render(s.result);
+    }).catch(function(e){ finish(); showFormErr(e.message); });
+  }
+
+  function render(r){
+    var total=r.findings.length, rating=r.summary.risk_rating;
+    var rb=$("rating"); rb.className="rating r-"+rating; $("ratingText").textContent=rating;
+    $("ratingSub").textContent=total+" finding"+(total===1?"":"s");
+    var bar=$("bar"), legend=$("legend"); bar.textContent=""; legend.textContent="";
+    SEVS.forEach(function(s){ var n=r.counts[s]||0;
+      if(n&&total){ var i=el("i",{class:"k-"+s,title:n+" "+s}); i.style.width=(n/total*100)+"%"; bar.appendChild(i); }
+      if(s!=="Info"||n){ var sp=el("span",{class:"t-"+s}); sp.appendChild(el("b",null,n)); sp.appendChild(document.createTextNode(s)); legend.appendChild(sp); } });
+    $("exec").textContent=r.summary.executive_summary||"";
+    var dl=$("downloads"); dl.textContent="";
+    var base="/api/jobs/"+job+"/report.";
+    dl.appendChild(el("a",{href:base+"html?inline=1&token="+TOKEN,target:"_blank",rel:"noopener",class:"primary"},"Open full report"));
+    [["html","HTML"],["md","Markdown"],["json","JSON"],["sarif","SARIF"]].forEach(function(p){
+      dl.appendChild(el("a",{href:base+p[0]+"?token="+TOKEN},"Download "+p[1])); });
+    var box=$("findings"); box.textContent="";
+    if(!total) box.appendChild(el("p",null,"No findings at or above the threshold."));
+    r.findings.forEach(function(f){
+      var d=el("details",{class:"f sev-"+f.severity}); var s=el("summary");
+      s.appendChild(el("span",{class:"mono"},f.id)); s.appendChild(el("span",{class:"sev"},f.severity));
+      s.appendChild(el("span",null,f.title));
+      var loc=f.locations[0]; var lbl=loc.file+":"+loc.start_line+(loc.end_line>loc.start_line?"-"+loc.end_line:"");
+      s.appendChild(el("span",{class:"loc mono"},lbl+(f.locations.length>1?" and "+(f.locations.length-1)+" more":"")+" | "+f.status));
+      d.appendChild(s);
+      var b=el("div",{class:"body"});
+      b.appendChild(el("div",{class:"facts"},f.cwe+" | "+f.category+" | "+f.confidence+" confidence | "+
+        ({"rule+ai":"Rule + AI verified","ai":"Found by AI","rule":"Rule only"}[f.source]||f.source)));
+      function sec(t,txt,pre){ if(!txt) return; b.appendChild(el("h4",null,t)); b.appendChild(el(pre?"pre":"p",null,txt)); }
+      sec("What is wrong", f.description);
+      sec("Evidence", f.locations.map(function(l){ return l.file+":"+l.start_line+"\n"+(l.snippet||""); }).join("\n\n"), true);
+      sec("Why it matters", f.impact); sec("How to fix it", f.recommendation); sec("Secure code", f.secure_code, true);
+      sec("Validation notes", f.validation_notes);
+      d.appendChild(b); box.appendChild(d);
+    });
+    var m=r.metrics;
+    $("metrics").textContent="Model: "+r.ai_model+". "+m.files_collected+" files, "+m.lines_scanned+" lines. Rule candidates: "+
+      m.rule_candidates+", rejected by AI: "+m.ai_rejected+", new AI findings: "+m.ai_new_findings+", grounding drops: "+
+      m.grounding_dropped+", merged duplicates: "+m.merged_duplicates+". "+r.duration_s+"s.";
+    $("results").classList.remove("hidden");
+  }
+})();
+</script>
+</body>
+</html>
